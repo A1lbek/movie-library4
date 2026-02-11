@@ -3,9 +3,6 @@ const router = express.Router();
 const User = require('../models/User');
 const { redirectIfAuthenticated } = require('../middleware/auth');
 
-/**
- * Initialize user database connection
- */
 let db;
 let usersCollection;
 
@@ -16,14 +13,10 @@ function initializeDb(database) {
   }
 }
 
-/**
- * POST /api/auth/register - Register new user
- */
 router.post('/register', async (req, res) => {
   try {
     const { username, password, email } = req.body;
 
-    // Validate input
     const errors = User.validateUserData(username, password, email);
     if (errors.length > 0) {
       return res.status(400).json({ 
@@ -32,14 +25,12 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check if database is connected
     if (!usersCollection) {
       return res.status(503).json({ 
         error: 'Database unavailable' 
       });
     }
 
-    // Check if username already exists
     const existingUser = await usersCollection.findOne({ 
       username: username.trim() 
     });
@@ -50,11 +41,9 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Create user
     const newUser = User.createUserObject(username, password, email);
     const result = await usersCollection.insertOne(newUser);
 
-    // Create session
     req.session.userId = result.insertedId.toString();
     req.session.user = {
       username: newUser.username,
@@ -77,28 +66,22 @@ router.post('/register', async (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/login - Login user
- */
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Validate input
     if (!username || !password) {
       return res.status(400).json({ 
         error: 'Invalid credentials' 
       });
     }
 
-    // Check if database is connected
     if (!usersCollection) {
       return res.status(503).json({ 
         error: 'Database unavailable' 
       });
     }
 
-    // Find user
     const user = await usersCollection.findOne({ 
       username: username.trim() 
     });
@@ -109,7 +92,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Verify password
     const isPasswordValid = User.verifyPassword(password, user.password);
 
     if (!isPasswordValid) {
@@ -118,7 +100,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Create session
     req.session.userId = user._id.toString();
     req.session.user = {
       username: user.username,
@@ -138,17 +119,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/logout - Logout user
- */
 router.post('/logout', (req, res) => {
   req.sessionDestroy();
   res.json({ message: 'Logout successful' });
 });
 
-/**
- * GET /api/auth/me - Get current user
- */
 router.get('/me', async (req, res) => {
   try {
     if (!req.session.userId) {

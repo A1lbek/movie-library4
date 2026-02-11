@@ -3,12 +3,10 @@ const router = express.Router();
 const { ObjectId } = require('mongodb');
 const { getMoviesCollection } = require('../../database/mongodb');
 
-// Валидация ObjectId
 const isValidObjectId = (id) => {
   return ObjectId.isValid(id) && (String)(new ObjectId(id)) === id;
 };
 
-// GET /api/movies - все фильмы с фильтрацией, сортировкой, проекцией
 router.get('/', async (req, res) => {
   try {
     const collection = getMoviesCollection();
@@ -16,7 +14,6 @@ router.get('/', async (req, res) => {
     let sort = {};
     let projection = {};
 
-    // Фильтрация
     if (req.query.genre) query.genre = req.query.genre;
     if (req.query.year) query.year = parseInt(req.query.year);
     if (req.query.year_min) query.year = { $gte: parseInt(req.query.year_min) };
@@ -24,15 +21,13 @@ router.get('/', async (req, res) => {
     if (req.query.director) query.director = { $regex: req.query.director, $options: 'i' };
     if (req.query.title) query.title = { $regex: req.query.title, $options: 'i' };
 
-    // Сортировка
     if (req.query.sortBy) {
       const order = req.query.order === 'desc' ? -1 : 1;
       sort[req.query.sortBy] = order;
     } else {
-      sort.title = 1; // Сортировка по умолчанию
+      sort.title = 1;
     }
 
-    // Проекция (выбор полей)
     if (req.query.fields) {
       const fields = req.query.fields.split(',');
       fields.forEach(field => {
@@ -56,7 +51,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/movies/:id - один фильм по ID
 router.get('/:id', async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -79,12 +73,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/movies - создать новый фильм
 router.post('/', async (req, res) => {
   try {
     const { title, year, director, genre, duration, rating, description } = req.body;
-    
-    // Валидация
+
     if (!title || !year || !director || !genre) {
       return res.status(400).json({ 
         error: 'Missing required fields: title, year, director, genre' 
@@ -120,7 +112,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/movies/:id - обновить фильм
 router.put('/:id', async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -129,7 +120,6 @@ router.put('/:id', async (req, res) => {
 
     const collection = getMoviesCollection();
     
-    // Проверяем существование фильма
     const existingMovie = await collection.findOne({ 
       _id: new ObjectId(req.params.id) 
     });
@@ -143,11 +133,9 @@ router.put('/:id', async (req, res) => {
       updatedAt: new Date() 
     };
     
-    // Удаляем _id из данных обновления
     delete updateData._id;
     delete updateData.createdAt;
 
-    // Если genre - массив
     if (updateData.genre && !Array.isArray(updateData.genre)) {
       updateData.genre = [updateData.genre];
     }
@@ -167,7 +155,6 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/movies/:id - удалить фильм
 router.delete('/:id', async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
